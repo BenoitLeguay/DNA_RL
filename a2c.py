@@ -1,8 +1,10 @@
 import numpy as np
 import torch
 from torch import nn
+import torch.nn.functional as F
 import variable as var
 import utils
+torch.autograd.set_detect_anomaly(True)
 
 
 class A2C:
@@ -24,7 +26,8 @@ class A2C:
         self.actor.init_optimizer(actor_optimizer)
 
     def policy(self, state):
-        action = self.actor.predict_action(state)
+        with torch.no_grad():
+            action = self.actor.predict_action(state)
         return action
 
     def episode_init(self, state):
@@ -55,32 +58,35 @@ class A2C:
         current_state_value = self.critic.estimate_state(current_state)
 
         td_target = reward + self.discount_factor * next_state_value
-        td_error = td_target - current_state_value
+        td_error = td_target.clone() - current_state_value.clone()
 
-        self.critic.update(current_state_value, td_target)
         self.actor.update(current_state, current_action, td_error)
+        self.critic.update(current_state_value, td_target)
 
         next_action = self.policy(next_state)
 
         self.next_state = next_state
         self.next_action = next_action
 
-        return next_action
+        return next_action.cpu().numpy()
 
     def update_end(self, reward):
         current_action = self.next_action
         current_state = self.next_state
 
         current_state_value = self.critic.estimate_state(current_state)
-        td_target = np.array([float(reward)])
-        td_error = td_target - current_state_value.data.numpy()
-        self.critic.update(current_state_value, td_target)
+        td_target = utils.to_tensor([[float(reward)]])
+        td_error = td_target.clone() - current_state_value.clone()
+
         self.actor.update(current_state, current_action, td_error)
+        self.critic.update(current_state_value, td_target)
 
 
 class Critic(torch.nn.Module):
     def __init__(self, critic_init, network_init):
         super(Critic, self).__init__()
+
+        self.relu = nn.ReLU(inplace=False)
         self.l1 = nn.Linear(network_init["i_size"], network_init["l1_size"])
         self.l2 = nn.Linear(network_init["l1_size"], network_init["l2_size"])
         self.l3 = nn.Linear(network_init["l2_size"], network_init["l3_size"])
@@ -94,10 +100,10 @@ class Critic(torch.nn.Module):
         self.optimizer = torch.optim.Adam(self.parameters(), **optimizer_args)
 
     def forward(self, x):
-        x = self.l1(x).clamp(min=0.0)
-        x = self.l2(x).clamp(min=0.0)
-        x = self.l3(x).clamp(min=0.0)
-        x = self.l4(x)
+        x = self.relu(self.l1(x))
+        x = self.relu(self.l2(x))
+        x = self.relu(self.l3(x))
+        x = self.relu(self.l4(x))
 
         return x
 
@@ -105,7 +111,9 @@ class Critic(torch.nn.Module):
         return self(state)
 
     def update(self, current_state_value, td_target):
-
+        if not current_state_value.shape == td_target.shape:
+            print(current_state_value.shape)
+            print(td_target.shape)
         loss = self.loss(current_state_value, td_target)
 
         self.optimizer.zero_grad()
@@ -127,6 +135,7 @@ class Actor(torch.nn.Module):
         self.hidden_size = network_init["hidden_size"]
         self.l1_size = network_init["l1_size"]
 
+        self.relu = nn.ReLU()
         self.l1 = nn.Linear(network_init["i_size"] + self.hidden_size, self.l1_size)
         self.l1_to_h = nn.Linear(self.l1_size, self.hidden_size)
         self.l1_to_o = nn.Linear(self.l1_size, network_init["o_size"])
@@ -138,10 +147,11 @@ class Actor(torch.nn.Module):
     def forward(self, x, hidden):
 
         combined = torch.cat((x, hidden), 1)
-        l1_out = self.l1(combined).clamp(min=0.0)
-        hidden = self.l1_to_h(l1_out).clamp(min=0.0)
-        output = self.l1_to_o(l1_out).clamp(min=0.0)
-        output = self.softmax(output)
+        l1_out = self.relu(self.l1(combined))
+        hidden = self.relu(self.l1_to_h(l1_out))
+        output = self.relu(self.l1_to_o(l1_out))
+        output = self.softmax(output).clone()
+
         return output, hidden
 
     def rnn_forward(self, x):
@@ -166,12 +176,12 @@ class Actor(torch.nn.Module):
         actions_probabilities = self.rnn_forward(state)
         action_chosen_prob = torch.gather(actions_probabilities, dim=1, index=action.unsqueeze(dim=1))
 
-        sum_entropy = torch.distributions.Categorical(probs=actions_probabilities).entropy().sum()
+        sum_entropy = torch.distributions.Categorical(probs=actions_probabilities.clone()).entropy().sum()
 
         loss = -torch.log(action_chosen_prob.prod()) * td_error - self.entropy_learning_rate * sum_entropy
 
         self.optimizer.zero_grad()
-        loss.backward()
+        loss.backward(retain_graph=True)
         self.optimizer.step()
 
         self.loss_history.append(loss.item())

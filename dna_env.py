@@ -41,7 +41,7 @@ class DnaRLEnv:
         action_verified = self.check_constraint(action)
 
         if not action_verified:
-            return self.state(), self.reward_function(action_verified)
+            return self.state(), self.reward_function(action_verified), self.early_stop_reward.has_to_stop()
 
         co_length = min(co_length, (self.sequence_length - 1) - max(opt_start_point, co_start_point))
 
