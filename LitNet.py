@@ -21,13 +21,18 @@ class LitNet(pl.LightningModule):
         self.fcf = nn.Linear(out_fc, len(self.hparams.column_names))
         self.fa = nn.Sigmoid()
 
-    def forward(self, x):
+    def forward(self, x, return_embedding=False):
         x = self.cpa1(x)
         x = self.llr(self.c1(x))
         x1 = self.mp1(x)
         x2 = self.ap1(x)
         x = torch.cat([x1.flatten(1), x2.flatten(1)], dim=1)  # concat along last dimension
+
+        if return_embedding:
+            return x.clone()
+
         x = self.llr(self.fc1(x))
         x = self.llr(self.fc2(x))
         x = self.fa(self.fcf(x))
+
         return x

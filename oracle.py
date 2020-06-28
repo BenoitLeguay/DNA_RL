@@ -17,4 +17,13 @@ class OracleHandler:
 
         return score.squeeze().cpu().numpy()
 
+    def get_latent(self, sequences):
+        with torch.no_grad():
+            sequence = utils.to_tensor(sequences)
+            embedded_sequences = self.oracle(sequence, return_embedding=True)
+        return embedded_sequences.cpu().numpy()
+
+
+
+
 
