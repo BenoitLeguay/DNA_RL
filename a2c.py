@@ -58,7 +58,7 @@ class A2C:
         current_state_value = self.critic.estimate_state(current_state)
 
         td_target = reward + self.discount_factor * next_state_value
-        td_error = td_target.clone() - current_state_value.clone()
+        td_error = td_target - current_state_value
 
         self.actor.update(current_state, current_action, td_error)
         self.critic.update(current_state_value, td_target)
@@ -76,7 +76,7 @@ class A2C:
 
         current_state_value = self.critic.estimate_state(current_state)
         td_target = utils.to_tensor([[float(reward)]])
-        td_error = td_target.clone() - current_state_value.clone()
+        td_error = td_target - current_state_value
 
         self.actor.update(current_state, current_action, td_error)
         self.critic.update(current_state_value, td_target)
@@ -103,7 +103,7 @@ class Critic(torch.nn.Module):
         x = self.relu(self.l1(x))
         x = self.relu(self.l2(x))
         x = self.relu(self.l3(x))
-        x = self.relu(self.l4(x))
+        x = self.l4(x)
 
         return x
 
@@ -111,13 +111,11 @@ class Critic(torch.nn.Module):
         return self(state)
 
     def update(self, current_state_value, td_target):
-        if not current_state_value.shape == td_target.shape:
-            print(current_state_value.shape)
-            print(td_target.shape)
+
         loss = self.loss(current_state_value, td_target)
 
         self.optimizer.zero_grad()
-        loss.backward(retain_graph=True)
+        loss.backward()
         self.optimizer.step()
 
         self.loss_history.append(loss.item())
@@ -176,7 +174,7 @@ class Actor(torch.nn.Module):
         actions_probabilities = self.rnn_forward(state)
         action_chosen_prob = torch.gather(actions_probabilities, dim=1, index=action.unsqueeze(dim=1))
 
-        sum_entropy = torch.distributions.Categorical(probs=actions_probabilities.clone()).entropy().sum()
+        sum_entropy = torch.distributions.Categorical(probs=actions_probabilities).entropy().sum()
 
         loss = -torch.log(action_chosen_prob.prod()) * td_error - self.entropy_learning_rate * sum_entropy
 

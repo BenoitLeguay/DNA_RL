@@ -7,6 +7,7 @@ import operator
 import matplotlib.pyplot as plt
 from copy import deepcopy
 from tqdm import tqdm
+import os
 
 
 def to_tensor(a):
@@ -39,6 +40,7 @@ class TrainSession():
         self.agents = agents
         self.env = env
         self.rewards_per_episode = {agent_name: np.array([]) for agent_name, _ in agents.items()}
+        self.reward_per_time_step = {agent_name: np.array([]) for agent_name, _ in agents.items()}
         self.time_steps_per_episode = {agent_name: np.array([]) for agent_name, _ in agents.items()}
         self.line_styles = ['solid', 'dashed', 'dashdot', 'dotted']
         self.num_lines_style = len(self.line_styles)
@@ -53,6 +55,7 @@ class TrainSession():
         self.agents.update(agents)
         self.rewards_per_episode.update({agent_name: np.array([]) for agent_name, _ in agents.items()})
         self.time_steps_per_episode.update({agent_name: np.array([]) for agent_name, _ in agents.items()})
+        self.reward_per_time_step.update({agent_name: np.array([]) for agent_name, _ in agents.items()})
 
         return agent_names
 
@@ -75,6 +78,7 @@ class TrainSession():
             agents.update({agent_name: agent_object(agent_init_tmp)})
             self.rewards_per_episode.update({agent_name: np.array([])})
             self.time_steps_per_episode.update({agent_name: np.array([])})
+            self.reward_per_time_step.update({agent_name: np.array([])})
 
         self.agents.update(agents)
 
@@ -146,6 +150,7 @@ class TrainSession():
 
             time_steps_per_episode = list()
             rewards_per_episode = list()
+            reward_per_time_step = list()
 
             for _ in tqdm(range(n_episode)):
 
@@ -161,6 +166,7 @@ class TrainSession():
                         next_action)  # problem when the for loop end, while done is not True (agent_end not called)
                     next_action = agent.update(state, reward, done)
 
+                    reward_per_time_step.append(reward)
                     rewards += reward
 
                     if done:
@@ -173,3 +179,22 @@ class TrainSession():
                                                                       np.array(time_steps_per_episode)])
             self.rewards_per_episode[agent_name] = np.concatenate([self.rewards_per_episode[agent_name],
                                                                    np.array(rewards_per_episode)])
+            self.reward_per_time_step[agent_name] = np.concatenate([self.reward_per_time_step[agent_name],
+                                                                    np.array(reward_per_time_step)])
+
+    def save_model(self, suffix=''):
+        model_dir = os.path.join(var.PATH, 'saved_model/')
+        for agent_name, agent in self.agents.items():
+            torch.save(agent.critic.state_dict(), os.path.join(model_dir, f"{agent_name}_critic_{suffix}.pth"))
+            torch.save(agent.actor.state_dict(), os.path.join(model_dir, f"{agent_name}_actor_{suffix}.pth"))
+
+    def load_model(self, agent_name, suffix=''):
+        model_dir = os.path.join(var.PATH, 'saved_model/')
+        self.agents[agent_name].critic.load_state_dict(
+            torch.load(os.path.join(model_dir, f"{agent_name}_critic_{suffix}.pth"))
+        )
+        self.agents[agent_name].actor.load_state_dict(
+            torch.load(os.path.join(model_dir, f"{agent_name}_actor_{suffix}.pth"))
+        )
+
+
