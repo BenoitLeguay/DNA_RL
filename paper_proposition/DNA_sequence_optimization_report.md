@@ -1,6 +1,76 @@
-# Algorithm description
+# Asynchronous Advantage Actor-Critic (A3C) to generate DNA sequences
 
-## 1. Markovian Decision process
+## A. Introduction
+
+###### 1. Description
+
+Generating relevant and unseen DNA sequences is a necessity to understand and interpret our *Oracle* network. In this document, we suggest a new approach among the DNA sequences generation methods.
+
+The idea comes from the Genetic algorithm (GA), the relatively good performance of this model gave us the insight that repeated crossover is a good path to DNA sequence optimization. The arbitrary part (crossover defined beforehand) is frustrating though.  There is a lot of arbitrary of random choices during the the process of the Genetic Algorithm, this is an issue because we can't guarantee that we are getting closer to the optimum with the number of iteration and that the model is improving with time, one of the consequences of this is that the model is hard to compare with papers using reinforcement algorithm [Google] or sampling based technique [Listgarden]. On the other side the fact that the GA is yielding very convincing results in term of motifs even in difficult optimization problems (Uncertain oracle and space bigger that the one tested in most of the concurrent papers) is encouraging and give us the intuition that it would be interesting to exploit techniques relying on crossover. We want our model to make its choices based on the previous ones and to learn a decision making model that we could use for interpretation secondly. That's why we thought that using Reinforcement Learning framework could perfectly fits our goals.
+
+![image.png](https://storage.googleapis.com/slite-api-files-production/files/88be2e71-63c2-4fd9-bf61-2fe56d752837/image.png)
+
+RL framework has shown being very efficient regarding decision making problem. With a robust definition of the framework components, we have the strong feeling this thrilling optimization matter can be addressed using Reinforcement Learning. Especially, one of the main challenge of this set of task is to navigate on the thin line between "exploration" and "exploitation" in order to find both diverse and and efficient solutions. Recent improvements on Policy Gradient (*PG*) and in particular Actor-Critic (*AC*) algorithm demonstrate the latter outperforms value-based methods. The strong advantage of PG is its ability to learn stochastic policy and to sample from the learned probability distribution to perform its actions (*On-Policy algorithm*). This way, the panel of good possibilities to be chosen will not be affected by the algorithm. Thus and most importantly, the model will not converge to a single high rated sequence. More on exploitation-exploration trade-off is discussed in the algorithm description. 
+
+
+
+In the algorithm_description document I give a detailed description of the algorithm, but first, let's explain the outlines. This algorithm aims at optimizing a random DNA sequence so that it maximizes the *Oracle* return. So at each time step, we modify our sequence and we call the *Oracle* for feedback. These optimization's approaches differ from generation's ones (*i.e  generate one nucleotide at each iteration*).  You will find more about that below (Method Justification) but we want to show that crossover based ans thus optimization approach is well fitted here. As you may guess, the DNA sequence will be modified by crossovers, eventually our agent will learn to perform good crossover circumstantial (*i.e based on the sequences' couple*). As it is a continuous task, the sequence optimization will stop once the reward stagnate for an arbitrarily defined duration or reach a target value.  
+
+
+
+![1591376653640](/home/benoit/Documents/work/RL_DNA/paper_proposition/photos/1591376653640.png)
+
+ 
+
+###### 2. Related work
+
+**Model-based reinforcement learning for biological sequence design**
+
+*https://openreview.net/pdf?id=HklxbgBKvr*
+
+In September 2019, Google suggest a RL-based method to generate DNA. This approach is a generation's one, at each time step the model will choose a nucleotide (*i.e {A, T, G, C}*)  to stack on top of the current branch. So based on the current incomplete sequence, the model will try to find the right nucleotide to set afterward. 
+
+
+
+![image-20200607185837065](/home/benoit/Documents/work/RL_DNA/paper_proposition/photos/image-20200607185837065.png)
+
+
+
+###### 3. Method justification
+
+In this section, we will justify our choices and explain why we think our approach is efficient. At first, we want to clearly emphasize on the fact that recent RL has proven to be able to learn complexe structure, largely driven by the neural network paradigm. (Universal approximation theorem)
+
+
+
+###### 4. Comparison with related techniques 
+
+We both have the strong conviction that manipulate our sequences bloc-wise is a very efficient way compare to nucleotide-wise. Indeed, DNA interpret  information not as whole but sequentially. This intuition seems actually confirmed by practical results : when we run the GA with different crossover size we observer consistently a better performance of the 19 bp block crossover. 
+
+![diff_crossover](/home/benoit/Documents/work/RL_DNA/paper_proposition/photos/diff_crossover.png)
+
+![line_plot_runs](/home/benoit/Documents/work/RL_DNA/paper_proposition/photos/line_plot_runs.png)
+
+
+
+Hence our will to stand out from Google approach. We believe out Genetic Algorithm has relatively good result thanks to his unit-wise modification. As mentioned, we want to add artificial decision making to this system. We divert from the GA approach in a sense because we are not using a whole population but a single DNA sequence. This choice is driven by multiple reasons. The first and most obvious one is to relieve our RL model from a lot of information to handle. The agent will make assumption taking 2 sequences whether than a N-sized population. Also, in terms of *Oracle*'s call, each of them will be used for the following decision. This bootstrapping method gains the maximum potential of our *Oracle*. As shown on the figure below the number of sequence evaluated by the Oracle during the generation process is the core comparison of the papers we are comparing with. Thus, optimizing the sequences with a minimal number of step and using only two evaluations by step is a key asset to increase the credibility of our technique. 
+
+
+
+![image-20200909171743002](/home/benoit/Documents/work/RL_DNA/paper_proposition/photos/nb_sample_comparison.png)
+
+
+
+
+
+###### 5. Interpretation advantages 
+
+Concerning interpretability, our algorithm will try to model the cross over action with respect to *Oracle* evaluation. From a biological point of view, a real interpretation on crossover effect leading to new assumptions is a possible outcome. On top of that, having a natural link (*i.e the crossovers*) between our model and biology could make the *Oracle* interpretation a lot easier.  Crossover based technique have a strong advantage regarding interpretability has it is linked to our current vision of the activity regulation mechanisms, by "forcing" the generated sequences to rely on motifs / large blocks to optimize the objective we increase the chance to find interesting motif but also importantly decrease the chances to build adversarial examples : in substance the generated sequences not only have to be a set of nucleotide that maximize or objective but also to be composed by subset of nucleotides that locally have an impact. 
+
+
+
+## B. Algorithm description
+
+### 1. Markovian Decision process
 
 For this algorithm, we are going to optimize a DNA sequence iteratively. 
 
@@ -8,7 +78,7 @@ A Markov Decision Process (MDP) is a 6-tuple $(S,A,P,R,γ,D)$, where $S$ is the 
 
 
 
-#### State
+##### State
 
 Our state $s_t$ is going to be the current sequence to be optimized at time $t$, let's name it $S_{opt}$. The latter has a fixed length named $L_{opt}$. To perform modifications, the agent will use crossover and thus we'll need a **unmutable** DNA sequence called $S_{co}$ with $L_{co} \geqslant L_{opt}$. This sequence could be define randomly or maybe in a more judicious manner, such as the concatenation of all combination of ${A, T, G, C}$ in a range of k (*e.g k  from 1 to 5*). In this vision, $S_{co}$ would not be in the state $s_t$ as the modification won't affect the sequence.
 
@@ -16,15 +86,15 @@ Alternatively, the state $s_{t}$ could be seen as the concatenation of both $S_{
 
 
 
-#### Action and Transition function
+##### Action and Transition function
 
 The action is defined in a **discrete 3-dimensional** space such as $a_t = (l, i_{opt}, i_{co})$, where $l$ is the crossover length, $i_{opt}$ and $i_{co}$ are respectively the crossover starting point (*i.e the index*) for $S_{opt}$ and $S_{co}$. In that way we can perform all types of crossover. The transition function $P(s'|s, a)$ is then purely deterministic. I describe the function approximation architecture in section 3. 
 
 
 
-#### Reward
+##### Reward
 
-The reward function is handle by a ***Oracle***. This neural network takes a DNA sequence as input and output its estimation of how good is it. So $r_t = Oracle(s_{t})$ with $r_t \in [0, 1]$. 
+The reward function is handle by a ***Oracle***. This neural network takes a DNA sequence as input and output its estimation of how good is it. So $r_t = Oracle(s_{t})$ with $r_t \in [0, 1]$. However, I have the strong feeling that a relative reward will be more meaningful. That is why , I'll also use the difference between 2 consecutive scores as reward, $r_t = Oracle(s_{t}) - Oracle(s_{t-1})$. Accordingly, now the cross over is rewarded if it has enhanced the sequence's score (given by the ***Oracle***) and vice versa. 
 
 
 
@@ -57,14 +127,14 @@ The reward function is handle by a ***Oracle***. This neural network takes a DNA
       1. $w_{t+1} = w_t +\alpha_c * \frac{\partial L_c}{\partial w_t}$.
 
    8. $s_t = s_{t+1}$.
-   
+
       
 
-## 3. Function Approximation
+### 3. Function Approximation
 
 In this section we will talk about both **critic** and **actor** networks. 
 
-#### Actor
+##### Actor
 
 ###### Autoregressive
 
@@ -110,13 +180,13 @@ Another way of predicting multivariate distribution is to use a single neural ne
 
 
 
-#### Critic
+##### Critic
 
 It is a much more easier network to handle, since it only estimates the value of a particular state $s_t$. A simple neural network taking the state $s_t$ as input and outputting a scalar will make the job.
 
 
 
-## 4. Feature engineering
+### 4. Feature engineering
 
 Dealing with large state space can slow learning, and more precisely generalization over state. One way to manage this difficulty is to learn good latent representations to construct the states with meaningful information. The *Oracle* has been trained to grasp the DNA architecture, by taking a latent space of this network we could find a better representation of our state. 
 
@@ -124,7 +194,7 @@ Dealing with large state space can slow learning, and more precisely generalizat
 
 
 
-## 5. Exploration and Entropy
+### 5. Exploration and Entropy
 
 Good exploration method is a important point with large action space, the entropy penalty is quite efficient and easily scalable to our actor network. The entropy is a measure of uncertainty within a certain probabilistic distribution, it is the average “element of surprise” or amount of information when drawing from the probability distribution. When  the agent is learning its policy and an action returns a positive  reward for a state, it might happen that the agent will always use this  action in the future because it knows it produced *some*  positive reward. There could exist another action that yields a much  higher reward, but the agent will never try it because it will just  exploit what it has already learned. This means the agent can get stuck  in a local optimum because of not exploring the behavior of other  actions and never finding the global optimum. This is where entropy comes handy: we can use entropy to encourage exploration and avoid getting stuck in local optima.
 
@@ -174,7 +244,7 @@ To make a lighter document, I will not defined mathematically the gradient of th
 
 
 
-## 6. Differences in each action component dimension
+### 6. Differences in each action component dimension
 
 We might want to restrict the crossover size and thus $L_{opt}$ to a certain range (*e.g from 15 to 20*). This would improve learning drastically without restraining too much the learning spectrum. Indeed, a 1-sized cross over is really not the vision here nor a 40-sized which would have a substantial effect to the DNA sequences. 
 
@@ -186,14 +256,47 @@ The issue is that, as we are going to use a autoregressive model (*e.g LSTM netw
 
   
 
-
-###### 7. Asynchronous
+### 7. Asynchronous
 
 For a better understanding, the algorithm describes in 2. does not mention the asynchronous aspect. A3C consists of **multiple independent agents** (networks) with their own weights, who interact with a different copy of the environment in parallel. Thus, they can explore a bigger part of the state-action space in much less time. The agents (or workers) are trained in parallel and update periodically a global network, which holds shared parameters. The updates are not happening simultaneously and that’s where the asynchronous comes from. After each update, the agents resets their parameters to those of the global network and continue their independent exploration and training for n steps until they update themselves again.
 
 We see that the information flows not only from the agents to the global network but also between agents as each agent resets his weights by the global network, which has the information of all the other agents. 
 
 ![image-20200607190705345](/home/benoit/Documents/work/RL_DNA/paper_proposition/photos/image-20200607190705345.png)
+
+## C. Result (In-work part!)
+
+
+
+By discussing with specialists, we set the possible number of actions (*i.e crossovers*) to 150, meaning that the agent has 150 crossovers to improve as much as it can the sequence before the episode ends and the branch to be optimized is reinitialized. In the earliest step of the learning this has a low effectiveness since the agent is exploring quasi randomly. On the contrary this has its importance for the latest step. This forces the agent to improve quickly. To measure the agent performance, we focus on different metrics. Since the loss function in Deep Reinforcement Learning framework is hard to interpret (because of bootstrapping) we must take a look on others numbers.
+
+
+
+###### Learning Constraints
+
+The first verification I made was about the constraints. If my agent could learn from the constraint penalty signal, then the whole learning pipeline - from the reward signal to the action distributions generated - would be validated. After which, the following part would be for my neural networks to understand the complexity of the DNA structure. 
+
+- *constraint on a single action* 
+
+Here I force the cross over length to be between 6 and 16 included, the other action dimensions are constraint-less. Here we will compare our 2 different actor's approaches: RNN actor and N-Actions actor. Below you can see their action distributions during the training, the green area stands for the constraint validity. 
+
+![image-20200915174137655](/home/benoit/Documents/work/RL_DNA/paper_proposition/photos/image-20200915174137655.png)
+
+This particular constraint is learned in less than 10 episodes, meanings that a penalty reward is well understand by my agent. A better suited entropy learning rate would make the agent more explorer and thus the 8 and 14 cross over length would be more used. But the goal here is fulfill since the unauthorized actions are sidelined. 
+
+![image-20200917182545444](/home/benoit/.config/Typora/typora-user-images/image-20200917182545444.png)
+
+The RNN architecture does not help the constraint learning process along. Indeed, the hidden vector plays a very important role since it has to restrict outputs when equals to zero (it is initialized to 0.0) and forget this restriction in the other passes. It has a certain memory among the actions given that its neurons are the same for each action distribution generated. A longer learning process with a strong exploration seems necessary to sturdy learn the constraints. 
+
+- *Constraints on multiple actions*
+
+When imposed to more complex constraints, the agent succeed to avoid not allowed actions. Though, a larger exploration and more training example are thus used. To learn completely constraints on multiple actions is longer since the number of unauthorized action is exponential with respect to the number of constraints. The bar plots below is generated after 1000 episodes. Even with a long training the agent has difficulties to use all the possible set of actions (*e.g the 5th action for the first action dimension etc..*)
+
+![image-20200915184046236](/home/benoit/Documents/work/RL_DNA/paper_proposition/photos/image-20200915184046236.png)
+
+![image-20200917180644371](/home/benoit/Documents/work/RL_DNA/paper_proposition/photos/image-20200917180644371.png)
+
+
 
 
 

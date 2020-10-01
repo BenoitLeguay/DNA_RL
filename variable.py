@@ -1,6 +1,7 @@
 import torch
 import logging
 import os
+import a2c
 
 logger = None
 PATH = str(os.path.dirname(os.path.realpath(__file__)))
@@ -8,6 +9,8 @@ PROCESSING_LOGS = os.path.join(PATH, "logs/")
 if not os.path.isdir(PROCESSING_LOGS):
     os.makedirs(PROCESSING_LOGS)
 LOG_INFO = os.path.join(PROCESSING_LOGS, 'info.log')
+
+actor_types = {'actor_rnn': a2c.Actor, 'actor_vanilla': a2c.ActorVanilla, 'actor_n_actions': a2c.NActionActor}
 
 
 def init_logger():
