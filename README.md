@@ -96,7 +96,7 @@ Since we want to compare our autoregressive model with a baseline, I choose to i
 
 
 
-![](/home/benoit/Documents/work/RL_DNA/paper_proposition/photos/n_independent_actors.png)
+![](paper_proposition/photos/n_independent_actors.png)
 
 
 
@@ -106,7 +106,7 @@ Another way of predicting multivariate distribution is to use a single neural ne
 
 
 
-![n_actions_actor](/home/benoit/Documents/work/RL_DNA/paper_proposition/photos/n_actions_actor.png)
+![n_actions_actor](paper_proposition/photos/n_actions_actor.png)
 
 
 
@@ -120,7 +120,7 @@ It is a much more easier network to handle, since it only estimates the value of
 
 Dealing with large state space can slow learning, and more precisely generalization over state. One way to manage this difficulty is to learn good latent representations to construct the states with meaningful information. The *Oracle* has been trained to grasp the DNA architecture, by taking a latent space of this network we could find a better representation of our state. 
 
-![1591104437286](/home/benoit/Documents/work/RL_DNA/paper_proposition/photos/1591104437286.png)
+![1591104437286](paper_proposition/photos/1591104437286.png)
 
 
 
@@ -193,7 +193,7 @@ For a better understanding, the algorithm describes in 2. does not mention the a
 
 We see that the information flows not only from the agents to the global network but also between agents as each agent resets his weights by the global network, which has the information of all the other agents. 
 
-![image-20200607190705345](/home/benoit/Documents/work/RL_DNA/paper_proposition/photos/image-20200607190705345.png)
+![image-20200607190705345](paper_proposition/photos/image-20200607190705345.png)
 
 
 
