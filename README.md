@@ -76,11 +76,11 @@ Indeed, when dealing with multidimensional discrete action space, the number of 
 
 [Recent work](https://arxiv.org/pdf/1806.00589.pdf) have shown autoregressive model can be used to sample sequentially $A_i = (a_1, a_2, ..., a_i)$ from our policy. In that way sampling from model only requires summing over $O(3*L_{opt})$ effort whereas the aforementioned model requires $O((L_{opt})^3)$. 
 
-![1591061401846](/home/benoit/Documents/work/RL_DNA/paper_proposition/photos/1591061401846.png)
+![1591061401846](paper_proposition/photos/1591061401846.png)
 
 
 
-![1591061487464](/home/benoit/Documents/work/RL_DNA/paper_proposition/photos/1591061487464.png)
+![1591061487464](paper_proposition/photos/1591061487464.png)
 
 
 
