@@ -4,7 +4,7 @@
 
 For this algorithm, we are going to optimize a DNA sequence iteratively. 
 
-A Markov Decision Process (MDP) is a 6-tuple $(S,A,P,R,γ,D)$, where $S$ is the state space of the process,$A$ is  the  action  space, $P$ is a Markovian  transition model $P(s′|s,a)$ denotes the probability of a transition to state $s′$ when taking action $a$ in state $s$, $R$ is a reward function $R(s,a)$ is the expected reward for taking action $a$ in state $s$, $γ∈(0,1)$ is a discount factor for future rewards, and $D$ is the initial state distribution. A deterministic policy $π$ for an MDP is a mapping $π:S → A$ from states to actions; $π(s$) denotes the action choice in state $s$.
+A Markov Decision Process (MDP) is a 6-tuple $(S,A,P,R,γ,D)$, where $S$ is the state space of the process,$A$ is  the  action  space, $P$ is a Markovian  transition model $P(s′|s,a)$ denotes the probability of a transition to state $s′$ when taking action $a$ in state $s$, $R$ is a reward function $R(s,a)$ is the expected reward for taking action $a$ in state $s$, $γ∈(0,1)$ is a discount factor for future rewards, and $D$ is the initial state distribution. A deterministic policy $π$ for an MDP is a mapping $π:S → A$ from states to actions; $π(s)$ denotes the action choice in state $s$.
 
 
 
